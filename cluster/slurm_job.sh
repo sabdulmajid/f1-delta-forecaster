@@ -1,6 +1,13 @@
 #!/bin/bash
-#SBATCH --job-name=f1-forecaster
-#SBATCH --partition=midcard
+#SBATCH --job-naecho "Running F1 Forecaster automation pipeline..."
+python run_automation.py
+
+mkdir -p outputs/job_${SLURM_JOB_ID}
+[ -d "models/checkpoints" ] && cp -r models/checkpoints/* outputs/job_${SLURM_JOB_ID}/
+[ -d "predictions" ] && cp -r predictions outputs/job_${SLURM_JOB_ID}/
+[ -d "evaluation/results" ] && cp -r evaluation/results outputs/job_${SLURM_JOB_ID}/
+cp AUTOMATION_SUMMARY.md outputs/job_${SLURM_JOB_ID}/ 2>/dev/null || true
+cp slurm-${SLURM_JOB_ID}.out outputs/job_${SLURM_JOB_ID}/#SBATCH --partition=midcard
 #SBATCH --cpus-per-task=4
 #SBATCH --gres=gpu:1
 #SBATCH --mem-per-cpu=12G
@@ -26,27 +33,22 @@ echo "Python: $(python --version)"
 echo "PyTorch: $(python -c 'import torch; print(torch.__version__)')"
 echo "CUDA available: $(python -c 'import torch; print(torch.cuda.is_available())')"
 
-# Process data if needed
-if [ ! -f "data/processed/f1_data_2023.pkl" ]; then
-    echo "Processing F1 data..."
-    python data/data_loader.py --year 2023 --data_dir data
-fi
-
-# Train model
-echo "Starting training..."
-python training/train.py \
-    --data_path data/processed/f1_data_2023.pkl \
-    --model_size medium \
-    --batch_size 64 \
-    --learning_rate 1e-3 \
-    --max_epochs 50 \
-    --mode full \
-    --project_name f1-forecaster-cluster \
-    --output_dir models/checkpoints
+# Run the cluster-optimized automation pipeline
+echo "Running F1 Forecaster cluster automation pipeline..."
+python run_cluster_automation.py
 
 # Save results
 mkdir -p outputs/job_${SLURM_JOB_ID}
-cp -r models/checkpoints/* outputs/job_${SLURM_JOB_ID}/
+if [ -d "models/checkpoints" ]; then
+    cp -r models/checkpoints/* outputs/job_${SLURM_JOB_ID}/
+fi
+if [ -d "predictions" ]; then
+    cp -r predictions outputs/job_${SLURM_JOB_ID}/
+fi
+if [ -d "evaluation/results" ]; then
+    cp -r evaluation/results outputs/job_${SLURM_JOB_ID}/
+fi
+cp AUTOMATION_SUMMARY.md outputs/job_${SLURM_JOB_ID}/ 2>/dev/null || true
 cp slurm-${SLURM_JOB_ID}.out outputs/job_${SLURM_JOB_ID}/
 
 echo "Job completed: $(date)"
