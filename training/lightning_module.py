@@ -15,19 +15,14 @@ from models.transformer import create_model, MODEL_CONFIGS
 from models.baseline import create_baseline_model, BASELINE_CONFIGS
 
 class F1Dataset(Dataset):
-    """Dataset class for F1 tyre degradation data."""
-    
-    def __init__(self, features: np.ndarray, targets: np.ndarray):
-        """
-        Initialize dataset.
-        
-        Args:
-            features: Input sequences of shape (n_samples, seq_len, n_features)
-            targets: Target pace deltas of shape (n_samples,)
-        """
-        self.features = torch.FloatTensor(features)
-        self.targets = torch.FloatTensor(targets)
-    
+    def __init__(self, features, targets):
+        # ensure numeric & contiguous
+        features = np.asarray(features, dtype=np.float32)
+        targets  = np.asarray(targets , dtype=np.float32)
+
+        self.features = torch.from_numpy(features)
+        self.targets  = torch.from_numpy(targets)
+
     def __len__(self) -> int:
         return len(self.features)
     

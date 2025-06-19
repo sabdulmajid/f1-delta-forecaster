@@ -1,0 +1,15 @@
+model_config:
+  d_model: 256
+  nhead: 4
+  num_encoder_layers: 3
+  num_decoder_layers: 3
+  dim_feedforward: 1024
+  dropout: 0.1
+  model_type: transformer
+learning_rate: 0.001
+weight_decay: 1.0e-05
+scheduler_config:
+  type: reduce_on_plateau
+  factor: 0.5
+  patience: 8
+input_dim: 19

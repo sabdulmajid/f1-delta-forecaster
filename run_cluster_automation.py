@@ -76,7 +76,8 @@ def run_with_gpu_optimization(script_name, description, timeout_hours=1):
     env = os.environ.copy()
     env['CUDA_LAUNCH_BLOCKING'] = '1'  # Better error messages
     env['PYTORCH_CUDA_ALLOC_CONF'] = 'max_split_size_mb:512'  # Prevent fragmentation
-    
+    env["MKL_SERVICE_FORCE_INTEL"] = "1" 
+
     start_time = time.time()
     
     try:

@@ -347,6 +347,38 @@ def generate_evaluation_report(results: Dict[str, Any], output_dir: str = "evalu
     with open(f"{output_dir}/detailed_results.json", 'w') as f:
         json.dump(json_results, f, indent=2)
 
+# ----------------------------------------------------------------------
+# Compatibility wrappers for training/train.py
+# ----------------------------------------------------------------------
+def evaluate_model(model, dataloader, device="cpu"):
+    """
+    Simple wrapper that runs the model on the dataloader and returns MAE/RMSE/R².
+    You can replace this with something richer later.
+    """
+    model.eval()
+    preds, targets = [], []
+    with torch.no_grad():
+        for x, y in dataloader:
+            x = x.to(device)
+            y = y.to(device)
+            out = model(x).detach()
+            preds.append(out.cpu())
+            targets.append(y.cpu())
+
+    preds   = torch.cat(preds).numpy().flatten()
+    targets = torch.cat(targets).numpy().flatten()
+
+    return calculate_metrics(targets, preds)            # reuse your helper above
+
+
+def compare_models(metrics_a, metrics_b, key="mae"):
+    """
+    Return 'A' if metrics_a is better than metrics_b for the given key.
+    Lower-is-better metrics assumed.
+    """
+    return "A" if metrics_a.get(key, float("inf")) < metrics_b.get(key, float("inf")) else "B"
+
+
 def main():
     parser = argparse.ArgumentParser(description='Evaluate F1 forecasting models')
     parser.add_argument('--model_path', type=str, 

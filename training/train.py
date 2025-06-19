@@ -19,7 +19,6 @@ sys.path.append(str(Path(__file__).parent.parent))
 from training.lightning_module import F1LightningModule, F1DataModule, create_callbacks
 from training.lightning_module import DEFAULT_MODEL_CONFIG, DEFAULT_TRAINING_CONFIG
 from models.baseline import create_baseline_model, BASELINE_CONFIGS
-from evaluation.metrics import evaluate_model, compare_models
 
 def train_transformer_model(
     data_path: str,
