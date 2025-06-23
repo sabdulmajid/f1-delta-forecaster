@@ -1,6 +1,6 @@
 # F1 Tyre-Degradation Forecaster - Cluster Guide
 
-## 🚀 Quick Start (Automated Pipeline)
+## Quick Start (Automated Pipeline)
 
 The easiest way to run the complete pipeline is with the automated scripts:
 
@@ -21,10 +21,21 @@ sbatch cluster/slurm_job.sh
 ```
 
 This will automatically:
-- ✅ Test the pipeline with minimal data (5-10 minutes)
-- ✅ Train full models on 2023-2024 data (2-4 hours)  
-- ✅ Generate predictions for upcoming races (10-15 minutes)
-- ✅ Save all results to `outputs/job_<SLURM_JOB_ID>/`
+- Test the pipeline with minimal data (5-10 minutes)
+- Train full models on 2023-2024 data (2-4 hours)  
+- Generate predictions for upcoming races (10-15 minutes)
+- Save all results to `outputs/job_<SLURM_JOB_ID>/`
+
+**OR for 2024-specific training + 2025 GP prediction:**
+```bash
+sbatch cluster/slurm_2024_job.sh
+```
+
+This specialized job will:
+- Train exclusively on 2024 F1 data (3-5 hours)
+- Evaluate model performance on 2024 season
+- Predict 2025 British Grand Prix final results (Driver #, Name, Time)
+- Save results to `outputs/job_2024_<SLURM_JOB_ID>/`
 
 ### Local Development
 
