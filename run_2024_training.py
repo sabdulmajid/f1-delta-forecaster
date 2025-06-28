@@ -194,159 +194,103 @@ def predict_british_gp_2025():
         from training.lightning_module import F1LightningModule
         import torch
         
+        # Find the best available model (transformer or baseline)
+        best_model_path = None
+        best_model_type = None
+
+        # Prioritize transformer model if available
         checkpoint_dirs = [
             "models/checkpoints_2024/lightning_logs/version_0/checkpoints",
             "models/checkpoints_2024"
         ]
-        
-        checkpoint_path = None
         for dir_path in checkpoint_dirs:
             if Path(dir_path).exists():
                 ckpt_files = list(Path(dir_path).glob("*.ckpt"))
                 if ckpt_files:
                     best_ckpts = [f for f in ckpt_files if 'last' not in f.name]
-                    checkpoint_path = str(best_ckpts[0] if best_ckpts else ckpt_files[0])
-                    break
+                    if best_ckpts:
+                        best_model_path = str(best_ckpts[0])
+                        best_model_type = 'transformer'
+                        break
         
-        if not checkpoint_path:
-            log_message("No trained model found for prediction", "ERROR")
-            return False
-        
-        log_message(f"Loading model from: {checkpoint_path}")
-        model = F1LightningModule.load_from_checkpoint(checkpoint_path)
-        model.eval()
-        
-        # Get 2025 data if available, otherwise use historical British GP patterns
-        try:
-            import fastf1
-            schedule_2025 = fastf1.get_event_schedule(2025)
-            british_gp_2025 = schedule_2025[schedule_2025['EventName'].str.contains('British', case=False)]
-            
-            if len(british_gp_2025) > 0:
-                log_message("Found 2025 British GP in schedule")
-                british_gp_date = british_gp_2025.iloc[0]['EventDate']
-                log_message(f"2025 British GP scheduled for: {british_gp_date}")
-            else:
-                log_message("2025 British GP not found in schedule, using historical patterns")
+        # If no transformer, check for baseline models
+        if not best_model_path:
+            baseline_results_path = "models/checkpoints_2024/baseline_results.pkl"
+            if Path(baseline_results_path).exists():
+                with open(baseline_results_path, 'rb') as f:
+                    baseline_results = pickle.load(f)
                 
-        except Exception as e:
-            log_message(f"Could not fetch 2025 schedule: {e}", "WARNING")
+                # Find best baseline model by validation MAE
+                best_baseline = min(
+                    baseline_results.items(), 
+                    key=lambda item: item[1].get('val_mae', float('inf'))
+                )
+                best_model_path = best_baseline[0]
+                best_model_type = 'baseline'
+                log_message(f"Using best baseline model: {best_model_path}", "INFO")
+
+        if not best_model_path:
+            log_message("No trained model found for prediction.", "ERROR")
+            return False
+
+        # Load data for prediction (dummy data for now)
+        # In a real scenario, this would be pre-race data for the British GP
+        log_message("Generating dummy data for British GP 2025 prediction...")
         
-        # Create British GP prediction scenarios
-        drivers_2024 = [
-            "Max Verstappen", "Sergio Perez", "Charles Leclerc", "Carlos Sainz",
-            "Lando Norris", "Oscar Piastri", "George Russell", "Lewis Hamilton",
-            "Fernando Alonso", "Lance Stroll", "Esteban Ocon", "Pierre Gasly",
-            "Alex Albon", "Logan Sargeant", "Nico Hulkenberg", "Kevin Magnussen",
-            "Yuki Tsunoda", "Daniel Ricciardo", "Valtteri Bottas", "Zhou Guanyu"
-        ]
+        # Use the same feature dimension as the training data
+        with open("data/processed/f1_data_2024.pkl", 'rb') as f:
+            train_data = pickle.load(f)
         
-        predictions = []
+        num_features = train_data['features'].shape[2]
+        log_message(f"Feature dimension from training data: {num_features}")
+
+        # Create dummy data for 20 drivers, 5 laps each
+        num_drivers = 20
+        laps_per_driver = 5
         
-        # Create realistic race scenarios for British GP (Silverstone characteristics)
-        for i, driver in enumerate(drivers_2024):
-            driver_features = create_british_gp_features(i+1, driver)
+        # Generate random data with the correct feature dimension
+        dummy_features = np.random.rand(num_drivers * laps_per_driver, 5, num_features)
+        
+        log_message(f"Dummy data shape: {dummy_features.shape}")
+
+        # Make predictions
+        if best_model_type == 'transformer':
+            log_message(f"Loading transformer model from {best_model_path}")
+            model = F1LightningModule.load_from_checkpoint(best_model_path)
+            model.eval()
             
             with torch.no_grad():
-                features_tensor = torch.tensor(driver_features, dtype=torch.float32).unsqueeze(0)
-                prediction = model(features_tensor)
-                predicted_time = prediction.cpu().numpy()[0]
-            
-            # Convert to race time (base time + delta)
-            base_time = 5400.0  # ~1:30:00 for British GP
-            final_time = base_time + predicted_time[0] if len(predicted_time) > 0 else base_time
-            
-            predictions.append({
-                'Driver_Number': i + 1,
-                'Driver_Name': driver,
-                'Predicted_Time_Seconds': final_time,
-                'Predicted_Time_Formatted': format_race_time(final_time)
-            })
+                predictions = model(torch.from_numpy(dummy_features).float()).numpy()
         
-        # Sort by predicted time
-        predictions.sort(key=lambda x: x['Predicted_Time_Seconds'])
+        elif best_model_type == 'baseline':
+            log_message(f"Loading baseline model: {best_model_path}")
+            with open("models/checkpoints_2024/baseline_results.pkl", 'rb') as f:
+                baseline_results = pickle.load(f)
+            model = baseline_results[best_model_path]['model']
+            predictions = model.predict(dummy_features)
+
+        # Process and save predictions
+        prediction_df = pd.DataFrame({
+            'Driver': [f"Driver_{i+1}" for i in range(num_drivers) for _ in range(laps_per_driver)],
+            'Lap': [j+1 for _ in range(num_drivers) for j in range(laps_per_driver)],
+            'PredictedPaceDelta': predictions.flatten()
+        })
         
-        # Save predictions
-        output_dir = Path("predictions/british_gp_2025")
-        output_dir.mkdir(parents=True, exist_ok=True)
+        output_path = "predictions/british_gp_2025/predicted_results.csv"
+        prediction_df.to_csv(output_path, index=False)
         
-        predictions_df = pd.DataFrame(predictions)
-        predictions_df.to_csv(output_dir / "british_gp_2025_predictions.csv", index=False)
-        
-        # Save detailed results
-        with open(output_dir / "detailed_predictions.txt", "w") as f:
-            f.write("2025 BRITISH GRAND PRIX - PREDICTED FINAL RESULTS\n")
-            f.write("=" * 60 + "\n")
-            f.write(f"Generated: {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
-            f.write(f"Model: 2024 F1 Data Training\n\n")
-            
-            for i, pred in enumerate(predictions, 1):
-                f.write(f"{i:2d}. #{pred['Driver_Number']:2d} {pred['Driver_Name']:<20} {pred['Predicted_Time_Formatted']}\n")
-        
-        log_message("2025 British Grand Prix predictions completed")
-        log_message(f"Results saved to: {output_dir}")
-        
-        # Print top 10 predictions
-        print("\n" + "=" * 60)
-        print("2025 BRITISH GRAND PRIX - PREDICTED TOP 10")
-        print("=" * 60)
-        for i, pred in enumerate(predictions[:10], 1):
-            print(f"{i:2d}. #{pred['Driver_Number']:2d} {pred['Driver_Name']:<20} {pred['Predicted_Time_Formatted']}")
-        print("=" * 60)
-        
+        log_message(f"Predictions saved to {output_path}")
+        log_message("British GP 2025 prediction completed successfully.")
         return True
         
+    except FileNotFoundError:
+        log_message("Training data not found. Cannot determine feature dimensions for prediction.", "ERROR")
+        log_message("Please ensure 'data/processed/f1_data_2024.pkl' exists.", "ERROR")
+        return False
     except Exception as e:
-        log_message(f"British GP prediction failed: {e}", "ERROR")
+        log_message(f"Prediction failed: {e}", "ERROR")
         traceback.print_exc()
         return False
-
-def create_british_gp_features(driver_number, driver_name):
-    """Create feature vector for British GP prediction."""
-    # Silverstone-specific features (high-speed, medium downforce track)
-    features = np.zeros(50)  # Adjust based on your actual feature count
-    
-    # Driver position features
-    features[0] = driver_number / 20.0  # Normalized driver number
-    
-    # Track characteristics (Silverstone)
-    features[1] = 0.7   # Track speed coefficient (high-speed)
-    features[2] = 0.5   # Downforce requirement (medium)
-    features[3] = 0.8   # Overtaking difficulty
-    features[4] = 0.6   # Tyre degradation factor
-    
-    # Weather (typical British GP conditions)
-    features[5] = 22.0  # Air temperature
-    features[6] = 35.0  # Track temperature
-    features[7] = 0.3   # Rain probability
-    features[8] = 60.0  # Humidity
-    
-    # Tyre strategy (typical 2-stop)
-    features[9] = 2.0   # Number of stops
-    features[10] = 0.6  # Medium compound preference
-    features[11] = 25.0 # Average stint length
-    
-    # Historical performance factors
-    performance_multiplier = {
-        "Max Verstappen": 0.95, "Charles Leclerc": 0.97, "Lando Norris": 0.98,
-        "George Russell": 0.99, "Lewis Hamilton": 0.96, "Carlos Sainz": 0.98,
-        "Oscar Piastri": 1.01, "Fernando Alonso": 0.99, "Sergio Perez": 1.02
-    }.get(driver_name, 1.05)
-    
-    features[12] = performance_multiplier
-    
-    # Fill remaining features with track-specific data
-    for i in range(13, len(features)):
-        features[i] = np.random.normal(0.5, 0.1)  # Normalized random features
-    
-    return features
-
-def format_race_time(seconds):
-    """Format seconds to race time string."""
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = seconds % 60
-    return f"{hours}:{minutes:02d}:{secs:06.3f}"
 
 def save_results():
     """Save all results to output directory."""

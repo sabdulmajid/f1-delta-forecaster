@@ -128,21 +128,22 @@ class LinearRegressionBaseline(BaseEstimator, RegressorMixin):
         features = []
         
         for sequence in X:
-            # Aggregate features across the sequence
-            feature_vector = []
-            
-            # Mean values
-            feature_vector.extend(np.mean(sequence, axis=0))
-            
-            # Final values (most recent)
-            feature_vector.extend(sequence[-1])
-            
-            # Trends (difference between last and first)
-            feature_vector.extend(sequence[-1] - sequence[0])
-            
-            # Standard deviations
-            feature_vector.extend(np.std(sequence, axis=0))
-            
+            # Clean the sequence data
+            sequence = np.array(sequence, dtype=np.float32)
+            sequence = sequence[np.isfinite(sequence).all(axis=1)]
+
+            if sequence.shape[0] < 2:
+                # Not enough data to compute trends, use zeros
+                # The feature vector size should be consistent.
+                # mean, final, trend, stddev for 19 features = 19*4 = 76
+                feature_vector = [0.0] * (19 * 4)
+            else:
+                feature_vector = []
+                feature_vector.extend(np.mean(sequence, axis=0))
+                feature_vector.extend(sequence[-1])
+                feature_vector.extend(sequence[-1] - sequence[0])
+                feature_vector.extend(np.std(sequence, axis=0))
+
             features.append(feature_vector)
         
         return np.array(features)
@@ -196,24 +197,24 @@ class RandomForestBaseline(BaseEstimator, RegressorMixin):
         features = []
         
         for sequence in X:
-            feature_vector = []
-            
-            # Statistical aggregations
-            feature_vector.extend(np.mean(sequence, axis=0))
-            feature_vector.extend(np.std(sequence, axis=0))
-            feature_vector.extend(np.min(sequence, axis=0))
-            feature_vector.extend(np.max(sequence, axis=0))
-            
-            # Recent values
-            feature_vector.extend(sequence[-1])
-            
-            # Trends
-            if len(sequence) > 1:
+            # Clean the sequence data
+            sequence = np.array(sequence, dtype=np.float32)
+            sequence = sequence[np.isfinite(sequence).all(axis=1)]
+
+            if sequence.shape[0] < 2:
+                # Not enough data, use zeros.
+                # mean, std, min, max, recent, trend, mean_diff = 19 * 7 = 133
+                feature_vector = [0.0] * (19 * 7)
+            else:
+                feature_vector = []
+                feature_vector.extend(np.mean(sequence, axis=0))
+                feature_vector.extend(np.std(sequence, axis=0))
+                feature_vector.extend(np.min(sequence, axis=0))
+                feature_vector.extend(np.max(sequence, axis=0))
+                feature_vector.extend(sequence[-1])
                 feature_vector.extend(sequence[-1] - sequence[0])
                 feature_vector.extend(np.mean(np.diff(sequence, axis=0), axis=0))
-            else:
-                feature_vector.extend(np.zeros(sequence.shape[1] * 2))
-            
+
             features.append(feature_vector)
         
         return np.array(features)

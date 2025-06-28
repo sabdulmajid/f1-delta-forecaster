@@ -122,29 +122,32 @@ def train_baseline_models(data_path: str) -> Dict[str, Any]:
     
     print("Training baseline models...")
     for model_name, model_config in BASELINE_CONFIGS.items():
-        print(f"Training {model_name}...")
-        
-        model = create_baseline_model(model_name, **model_config)
-        model.fit(X_train, y_train)
-        
-        # Evaluate model
-        train_pred = model.predict(X_train)
-        val_pred = model.predict(X_val)
-        test_pred = model.predict(X_test)
-        
-        # Calculate metrics
-        train_mae = np.mean(np.abs(train_pred - y_train))
-        val_mae = np.mean(np.abs(val_pred - y_val))
-        test_mae = np.mean(np.abs(test_pred - y_test))
-        
-        print(f"{model_name} - Train MAE: {train_mae:.4f}, Val MAE: {val_mae:.4f}, Test MAE: {test_mae:.4f}")
-        
-        baseline_models[model_name] = {
-            'model': model,
-            'train_mae': train_mae,
-            'val_mae': val_mae,
-            'test_mae': test_mae
-        }
+        try:
+            print(f"Training {model_name}...")
+            
+            model = create_baseline_model(model_name, **model_config)
+            model.fit(X_train, y_train)
+            
+            # Evaluate model
+            train_pred = model.predict(X_train)
+            val_pred = model.predict(X_val)
+            test_pred = model.predict(X_test)
+            
+            # Calculate metrics
+            train_mae = np.mean(np.abs(train_pred - y_train))
+            val_mae = np.mean(np.abs(val_pred - y_val))
+            test_mae = np.mean(np.abs(test_pred - y_test))
+            
+            print(f"{model_name} - Train MAE: {train_mae:.4f}, Val MAE: {val_mae:.4f}, Test MAE: {test_mae:.4f}")
+            
+            baseline_models[model_name] = {
+                'model': model,
+                'train_mae': train_mae,
+                'val_mae': val_mae,
+                'test_mae': test_mae
+            }
+        except Exception as e:
+            print(f"ERROR: Failed to train baseline model {model_name}. Error: {e}")
     
     return baseline_models
 
@@ -214,13 +217,21 @@ def main():
         print("\n" + "="*50)
         print("Training Baseline Models")
         print("="*50)
-        baseline_results = train_baseline_models(args.data_path)
-        
-        # Save baseline results
-        baseline_output_path = os.path.join(args.output_dir, 'baseline_results.pkl')
-        with open(baseline_output_path, 'wb') as f:
-            pickle.dump(baseline_results, f)
-        print(f"Baseline results saved to {baseline_output_path}")
+        try:
+            baseline_results = train_baseline_models(args.data_path)
+            
+            # Save baseline results
+            if baseline_results:
+                baseline_output_path = os.path.join(args.output_dir, 'baseline_results.pkl')
+                with open(baseline_output_path, 'wb') as f:
+                    pickle.dump(baseline_results, f)
+                print(f"Baseline results saved to {baseline_output_path}")
+            else:
+                print("No baseline models were trained successfully.")
+
+        except Exception as e:
+            print(f"ERROR: An error occurred during baseline model training: {e}")
+            print("Continuing with transformer model training if applicable.")
     
     if args.mode in ['full', 'transformer_only']:
         print("\n" + "="*50)
