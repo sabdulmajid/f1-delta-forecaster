@@ -14,7 +14,17 @@ import numpy as np
 
 def log_message(message, level="INFO"):
     timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-    print(f"[{timestamp}] {level}: {message}", flush=True)
+    
+    colors = {
+        "INFO": "\033[94m",     # Blue
+        "WARNING": "\033[93m",  # Yellow
+        "ERROR": "\033[91m",    # Red
+        "SUCCESS": "\033[92m"   # Green
+    }
+    reset_color = "\033[0m"
+    
+    color = colors.get(level, "")
+    print(f"{color}[{timestamp}] {level}: {message}{reset_color}", flush=True)
 
 def get_upcoming_races():
     try:
