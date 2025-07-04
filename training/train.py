@@ -24,7 +24,8 @@ def train_transformer_model(
     data_path: str,
     config: Dict[str, Any],
     use_wandb: bool = True,
-    project_name: str = "f1-tyre-degradation"
+    project_name: str = "f1-tyre-degradation",
+    fast_dev_run: bool = False
 ) -> pl.LightningModule:
     """
     Train the transformer model.
@@ -34,6 +35,7 @@ def train_transformer_model(
         config: Training configuration
         use_wandb: Whether to use Weights & Biases logging
         project_name: W&B project name
+        fast_dev_run: Whether to run a single batch for testing
     
     Returns:
         Trained model
@@ -76,7 +78,8 @@ def train_transformer_model(
         callbacks=callbacks,
         deterministic=True,
         enable_progress_bar=True,
-        log_every_n_steps=50
+        log_every_n_steps=50,
+        fast_dev_run=fast_dev_run
     )
     
     # Train model
@@ -175,6 +178,8 @@ def main():
                        help='W&B project name')
     parser.add_argument('--output_dir', type=str, default='models/checkpoints',
                        help='Output directory for model checkpoints')
+    parser.add_argument('--fast_dev_run', action='store_true',
+                        help='Run a single batch for testing purposes')
     
     args = parser.parse_args()
     
@@ -241,7 +246,8 @@ def main():
             data_path=args.data_path,
             config=config,
             use_wandb=not args.no_wandb,
-            project_name=args.project_name
+            project_name=args.project_name,
+            fast_dev_run=args.fast_dev_run
         )
         
         print("Training completed!")

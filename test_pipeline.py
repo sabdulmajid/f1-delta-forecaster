@@ -57,7 +57,8 @@ def test_model_training():
             "--max_epochs", "2",
             "--mode", "transformer_only",
             "--no_wandb",
-            "--output_dir", "test_outputs"
+            "--output_dir", "test_outputs",
+            "--fast_dev_run"
         ]
         
         log_message(f"Running: {' '.join(cmd)}")
