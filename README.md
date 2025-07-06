@@ -1,12 +1,20 @@
-# F1 Tyre-Degradation Forecaster
+# F1 Tyre-Degradation Forecaster 🏎️
 
-A sequence-to-sequence transformer model for predicting Formula 1 lap pace deltas based on tyre compound, stint age, fuel load proxy, and recent micro-sector data.
+A state-of-the-art sequence-to-sequence transformer model for predicting Formula 1 lap pace deltas based on tyre compound, stint age, fuel load proxy, and recent micro-sector telemetry data.
 
 ## Project Overview
 
 **Goal**: Predict a car's next-lap pace delta given compound, stint age, fuel load proxy, and recent micro-sectors.
 
-**Why it's valuable**: Shows mastery of multivariate time-series forecasting and attention analysis; directly useful to broadcasters & strategy rooms.
+**Why it's valuable**: Demonstrates mastery of multivariate time-series forecasting with attention mechanisms; provides actionable insights for broadcasters, teams, and strategy analysts.
+
+## Key Features
+
+- **Advanced ML Pipeline**: Transformer-based sequence-to-sequence architecture
+- **Real-time Predictions**: GPU cluster deployment with SLURM job scheduling
+- **Comprehensive Evaluation**: Multiple baseline models (exponential smoothing, moving average, linear regression, random forest)
+- **Interactive Dashboard**: Streamlit web interface for race predictions
+- **Production Ready**: Automated error handling, logging, and cluster deployment
 
 ## Implementation Pipeline
 
