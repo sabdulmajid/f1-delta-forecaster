@@ -21,7 +21,15 @@ class F1DataLoader:
         
         cache_dir = self.raw_dir / "cache"
         cache_dir.mkdir(exist_ok=True)
-        fastf1.Cache.enable_cache(str(cache_dir))
+        try:
+            fastf1.Cache.enable_cache(str(cache_dir))
+            print(f"✓ FastF1 cache enabled at: {cache_dir}")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not enable FastF1 cache: {e}")
+        
+        self.processed_sessions = 0
+        self.failed_sessions = 0
+        self.total_laps_processed = 0
     
     def load_race_data(self, year: int, race: str) -> pd.DataFrame:
         try:
