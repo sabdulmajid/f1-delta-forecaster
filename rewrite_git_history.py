@@ -35,16 +35,19 @@ def run_command(command):
 
 def get_commits_on_branch():
     """Gets the list of commit hashes on the current branch."""
-    # Find the common ancestor with main/master or fallback to the root
-    main_branch = "main" if run_command("git branch --list main") else "master"
-    try:
-        ancestor = run_command(f"git merge-base {main_branch} HEAD")
-        commit_range = f"{ancestor}..HEAD"
-    except subprocess.CalledProcessError:
-        print("Could not find a 'main' or 'master' branch. Rewriting all commits.")
-        commit_range = "HEAD"
-        
-    return run_command(f"git rev-list --reverse {commit_range}").splitlines()
+    # Get all commits on the current branch
+    print("Rewriting all commits on the current branch.")
+    
+    # Get all commits from the root
+    commits = run_command("git rev-list --reverse HEAD").splitlines()
+    
+    # Filter out very old commits (keep only recent ones, e.g., last 50 commits)
+    max_commits = 50
+    if len(commits) > max_commits:
+        print(f"Found {len(commits)} commits, keeping the most recent {max_commits}")
+        commits = commits[-max_commits:]
+    
+    return commits
 
 def generate_new_dates(num_commits):
     """Generates a list of new dates spread over the last 60 days."""
