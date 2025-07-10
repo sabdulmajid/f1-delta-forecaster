@@ -15,29 +15,40 @@ import argparse
 from pathlib import Path
 import json
 
-def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
+def calculate_metrics(y_true: np.ndarray, y_pred: np.ndarray, fast_mode: bool = False) -> Dict[str, float]:
     """
-    Calculate comprehensive evaluation metrics.
+    Calculate comprehensive evaluation metrics with optional fast mode.
     
     Args:
         y_true: True values
         y_pred: Predicted values
+        fast_mode: If True, compute only essential metrics for speed
     
     Returns:
         Dictionary of metrics
     """
+    # Convert to numpy arrays and handle edge cases
+    y_true = np.asarray(y_true, dtype=np.float32)
+    y_pred = np.asarray(y_pred, dtype=np.float32)
+    
+    # Basic metrics (always computed)
     metrics = {
-        'mae': mean_absolute_error(y_true, y_pred),
-        'mse': mean_squared_error(y_true, y_pred),
-        'rmse': np.sqrt(mean_squared_error(y_true, y_pred)),
-        'r2': r2_score(y_true, y_pred),
-        'mape': np.mean(np.abs((y_true - y_pred) / (y_true + 1e-8))) * 100,
-        'max_error': np.max(np.abs(y_true - y_pred)),
-        'median_ae': np.median(np.abs(y_true - y_pred))
+        'mae': float(mean_absolute_error(y_true, y_pred)),
+        'rmse': float(np.sqrt(mean_squared_error(y_true, y_pred))),
     }
     
-    # Additional F1-specific metrics
-    metrics['accuracy_within_0.5s'] = np.mean(np.abs(y_true - y_pred) < 0.5) * 100
+    if not fast_mode:
+        # Comprehensive metrics for detailed evaluation
+        metrics.update({
+            'mse': float(mean_squared_error(y_true, y_pred)),
+            'r2': float(r2_score(y_true, y_pred)),
+            'mape': float(np.mean(np.abs((y_true - y_pred) / (y_true + 1e-8))) * 100),
+            'max_error': float(np.max(np.abs(y_true - y_pred))),
+            'median_ae': float(np.median(np.abs(y_true - y_pred)))
+        })
+        
+        # Additional F1-specific metrics
+        metrics['accuracy_within_0.5s'] = float(np.mean(np.abs(y_true - y_pred) < 0.5) * 100)
     metrics['accuracy_within_1.0s'] = np.mean(np.abs(y_true - y_pred) < 1.0) * 100
     
     return metrics
