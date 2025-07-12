@@ -25,8 +25,17 @@ def check_cluster_environment():
         log_message(f"Running in SLURM job: {job_id}")
         log_message(f"Node: {os.environ.get('SLURMD_NODENAME', 'unknown')}")
         log_message(f"CPUs: {os.environ.get('SLURM_CPUS_PER_TASK', 'unknown')}")
+        log_message(f"Memory: {os.environ.get('SLURM_MEM_PER_NODE', 'unknown')}MB")
     else:
         log_message("Not in SLURM environment - running standalone")
+    
+    try:
+        import psutil
+        memory = psutil.virtual_memory()
+        log_message(f"System Memory: {memory.total / (1024**3):.1f}GB total, {memory.available / (1024**3):.1f}GB available")
+        log_message(f"CPU Usage: {psutil.cpu_percent(interval=1):.1f}%")
+    except ImportError:
+        log_message("psutil not available - skipping resource monitoring", "WARNING")
     
     # Check GPU availability
     try:
@@ -36,7 +45,8 @@ def check_cluster_environment():
             log_message(f"GPU available: {gpu_count} device(s)")
             for i in range(gpu_count):
                 gpu_name = torch.cuda.get_device_name(i)
-                log_message(f"  GPU {i}: {gpu_name}")
+                gpu_memory = torch.cuda.get_device_properties(i).total_memory / (1024**3)
+                log_message(f"  GPU {i}: {gpu_name} ({gpu_memory:.1f}GB)")
         else:
             log_message("No GPU available - will use CPU", "WARNING")
     except ImportError:
